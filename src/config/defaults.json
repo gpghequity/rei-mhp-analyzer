@@ -1,0 +1,78 @@
+{
+  "_provenance": {
+    "source": "gorilla-ai/configs/defaults.json",
+    "sourceCommit": "63c651c",
+    "portedOn": "2026-05-08",
+    "modifications": "none — verbatim copy"
+  },
+  "rates": {
+    "RATE_BANK_STORAGE": 0.0725,
+    "RATE_BANK_RESI":    0.0700,
+    "RATE_OWNER":        0.0800,
+    "RATE_SELLER":       0.0500,
+    "RATE_REFI":         0.0725
+  },
+  "amortization": {
+    "AMORT_BANK_STORAGE": 25,
+    "AMORT_BANK_RESI":    30,
+    "AMORT_OWNER":        25,
+    "AMORT_SELLER":       25,
+    "AMORT_REFI":         15
+  },
+  "ltv": {
+    "LTV_STORAGE": 0.75,
+    "LTV_RESI":    0.80
+  },
+  "dscr": {
+    "DSCR_CONSERVATIVE": 1.25,
+    "DSCR_STRETCH":      1.15
+  },
+  "expense": {
+    "STORAGE_EXPENSE_FLOOR": 0.35,
+    "PAD_LIGHT":    0.00,
+    "PAD_STANDARD": 0.20,
+    "PAD_HARSH":    0.30
+  },
+  "reserves": {
+    "WORKING_CAPITAL_PCT": 0.25,
+    "POCKET_FLOOR":        10000
+  },
+  "fees": {
+    "WHOLESALE_FEE":     10000,
+    "CLOSING_RESI":      3000,
+    "HOLDING_PER_MONTH": 350,
+    "HOLDING_MONTHS":    6,
+    "SELLING_COSTS_PCT": 0.08
+  },
+  "seller_note": {
+    "SELLER_BALLOON_YEARS": 10
+  },
+  "residential_arv": {
+    "ARV_PERCENTILE":   0.40,
+    "ARV_MIN_COMPS":    3,
+    "ARV_RADIUS_MILES": 0.5,
+    "ARV_MONTHS_BACK":  12,
+    "MAO_FACTOR":       0.70
+  },
+  "storage_equity_requirement": {
+    "BANK_POINTS_PCT":     0.01,
+    "BANK_LENDER_FEES":    3500,
+    "LEGAL":               2500,
+    "TITLE_PCT":           0.005,
+    "ENVIRONMENTAL":       3000,
+    "APPRAISAL":           4500,
+    "SURVEY":              2500,
+    "INSURANCE_SETUP":     5000,
+    "PITI_RESERVE_MONTHS": 3
+  },
+  "kicker": {
+    "PCT_DEFAULT":  0.20,
+    "CAP_DEFAULT":  50000,
+    "WINDOW_YEARS": 5
+  },
+  "growth": {
+    "NOI_GROWTH_CONSERVATIVE": 0.03,
+    "NOI_GROWTH_STRETCH":      0.05,
+    "EXPENSE_GROWTH":          0.0235
+  }
+}
