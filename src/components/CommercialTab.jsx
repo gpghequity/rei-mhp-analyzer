@@ -180,7 +180,7 @@ export default function CommercialTab(_props) {
           <div><label style={lbl}>Asking price ($)</label><input type="number" style={inp} value={inputs.askingPrice} onChange={e => update('askingPrice', e.target.value)} /></div>
           <div><label style={lbl}>Total building SF (gross)</label><input type="number" style={inp} value={inputs.totalBuildingSF} onChange={e => update('totalBuildingSF', e.target.value)} /></div>
           <div><label style={lbl}>Total leasable SF (net)</label><input type="number" style={inp} value={inputs.totalLeasableSF} onChange={e => update('totalLeasableSF', e.target.value)} /></div>
-          <div><label style={lbl}>Common area SF (auto)</label><input style={{ ...inp, background: '#f8fafc' }} value={commonAreaSF.toLocaleString()} readOnly /></div>
+          <div><label style={lbl}>Common area SF (auto)</label><input style={{ ...inp, background: '#f8fafc' }} value={commonAreaSF.toLocaleString('en-US')} readOnly /></div>
           <div><label style={lbl}>Load factor % (auto)</label><input style={{ ...inp, background: '#f8fafc' }} value={fmtPct(loadFactor)} readOnly /></div>
           <div>
             <label style={lbl}>Building type</label>
