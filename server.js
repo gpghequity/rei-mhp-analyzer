@@ -1,7 +1,9 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import handler from './api/calc.js';
+import calcHandler from './api/calc.js';
+import saveAnalysisHandler from './api/save-analysis.js';
+import loadAnalysisHandler from './api/load-analysis.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -12,9 +14,17 @@ app.use(express.json());
 // Serve static files from dist (Vite build output)
 app.use(express.static(join(__dirname, 'dist')));
 
-// API endpoint for calc
+// API endpoints
 app.post('/api/calc', (req, res) => {
-  handler(req, res);
+  calcHandler(req, res);
+});
+
+app.post('/api/save-analysis', (req, res) => {
+  saveAnalysisHandler(req, res);
+});
+
+app.get('/api/load-analysis', (req, res) => {
+  loadAnalysisHandler(req, res);
 });
 
 // Fallback to index.html for SPA routing

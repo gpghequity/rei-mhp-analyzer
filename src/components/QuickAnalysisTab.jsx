@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function QuickAnalysisTab() {
   const [propertyType, setPropertyType] = useState('commercial')
@@ -15,6 +15,48 @@ export default function QuickAnalysisTab() {
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [sheetData, setSheetData] = useState(null)
+  const [loadingSheet, setLoadingSheet] = useState(true)
+
+  useEffect(() => {
+    loadSheetData()
+  }, [])
+
+  const loadSheetData = async () => {
+    try {
+      const resp = await fetch('/api/sheet-data')
+      if (!resp.ok) throw new Error('Could not load extracted data')
+      const data = await resp.json()
+      setSheetData(data)
+      if (data.propertyName) setInputs(prev => ({ ...prev, propertyName: data.propertyName }))
+      if (data.address) {
+        setInputs(prev => ({ ...prev, address: data.address }))
+        loadPreviousAnalysis(data.address)
+      }
+      if (data.annualNOI) setInputs(prev => ({ ...prev, annualNOI: String(data.annualNOI) }))
+      if (data.arv) setInputs(prev => ({ ...prev, arv: String(data.arv) }))
+      if (data.rehab) setInputs(prev => ({ ...prev, rehab: String(data.rehab) }))
+      if (data.purchase) setInputs(prev => ({ ...prev, purchase: String(data.purchase) }))
+    } catch (err) {
+      // Silently fail — user can still enter data manually
+    } finally {
+      setLoadingSheet(false)
+    }
+  }
+
+  const loadPreviousAnalysis = async (address) => {
+    if (!address) return
+    try {
+      const resp = await fetch(`/api/load-analysis?address=${encodeURIComponent(address)}`)
+      const data = await resp.json()
+      if (data.analysis) {
+        setResults(data.analysis)
+        setPropertyType(data.analysis.analysisType || propertyType)
+      }
+    } catch (err) {
+      // Silently fail
+    }
+  }
 
   const update = (field, value) => {
     setInputs(prev => ({ ...prev, [field]: value }))
@@ -27,6 +69,10 @@ export default function QuickAnalysisTab() {
     setResults(null)
 
     try {
+      if (!inputs.address) {
+        throw new Error('Enter property address')
+      }
+
       let payload = {
         propertyName: inputs.propertyName,
         address: inputs.address
@@ -70,6 +116,20 @@ export default function QuickAnalysisTab() {
 
       const data = await resp.json()
       setResults(data)
+
+      // Save analysis to Drive folder
+      await fetch('/api/save-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: inputs.address,
+          propertyName: inputs.propertyName,
+          analysisType: propertyType,
+          inputs: payload.inputs,
+          results: data.result,
+          extractedData: sheetData || {}
+        })
+      })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -235,12 +295,15 @@ export default function QuickAnalysisTab() {
 
       {/* Results */}
       {results && (() => {
-        const r = results.result
+        const r = results.result || results
         return (
           <div style={{ background: '#f9fafb', borderRadius: 6, padding: 16, marginTop: 24 }}>
-            <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 700, color: '#1a2456' }}>
-              {inputs.propertyName || 'Analysis'} {inputs.address && `• ${inputs.address}`}
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1a2456' }}>
+                {inputs.propertyName || 'Analysis'} {inputs.address && `• ${inputs.address}`}
+              </h3>
+              <div style={{ fontSize: 12, color: '#15803d', fontWeight: 600 }}>✓ Saved</div>
+            </div>
 
             {/* Commercial DSCR */}
             {propertyType === 'commercial' && (
@@ -287,6 +350,16 @@ export default function QuickAnalysisTab() {
                 <ResultRow k="Annual Debt Service" v={fmtMoney(r.annualDS)} />
                 <ResultRow k="DSCR" v={r.dscr?.toFixed(3)} pass={r.pass} bold />
                 <ResultRow k="Monthly Cash Flow" v={fmtMoney(r.pocketCashMonthly)} bold large />
+              </div>
+            )}
+
+            {/* Extracted & Enriched Data */}
+            {(sheetData || results.extractedData) && Object.keys(sheetData || results.extractedData || {}).length > 0 && (
+              <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #d4dae8' }}>
+                <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#1a2456', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Extracted & Enriched Data</h4>
+                {Object.entries(sheetData || results.extractedData || {}).map(([key, val]) => (
+                  <ResultRow key={key} k={key} v={val && typeof val === 'object' ? JSON.stringify(val) : String(val)} />
+                ))}
               </div>
             )}
           </div>
