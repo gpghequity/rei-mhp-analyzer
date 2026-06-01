@@ -112,10 +112,10 @@ describe('residential.js (Math Bible v3 port)', () => {
     const r = residentialAllModes(50000, 14000)
     expect(r.light.padPct).toBe(0)
     expect(r.standard.padPct).toBe(0.20)
-    expect(r.harsh.padPct).toBe(0.30)
+    expect(r.harsh.padPct).toBe(0.33)                 // Math Bible defaults.json PAD_HARSH = 0.33
     expect(r.light.noi).toBeCloseTo(36000, 0)         // 50000 - 14000 - 0
-    expect(r.standard.noi).toBeCloseTo(26000, 0)      // 50000 - 14000 - 10000
-    expect(r.harsh.noi).toBeCloseTo(21000, 0)         // 50000 - 14000 - 15000
+    expect(r.standard.noi).toBeCloseTo(26000, 0)      // 50000 - 14000 - (0.20 × 50000 = 10000)
+    expect(r.harsh.noi).toBeCloseTo(19500, 0)         // 50000 - 14000 - (0.33 × 50000 = 16500)
   })
 
   it('residentialMAO applies 70% rule', () => {
