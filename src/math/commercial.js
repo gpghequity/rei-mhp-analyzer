@@ -8,8 +8,8 @@
 
 // ── Lender + reserve defaults (all user-overridable in UI) ─────────────
 export const DEFAULT_DSCR = 1.25
-export const DEFAULT_LENDER_RATE = 0.0775
-export const DEFAULT_LENDER_AM_YEARS = 25
+export const DEFAULT_LENDER_RATE = 0.07
+export const DEFAULT_LENDER_AM_YEARS = 30
 export const DEFAULT_LENDER_TERM_YEARS = 5
 export const DEFAULT_SELLER_RATE = 0.06
 export const DEFAULT_SELLER_AM_YEARS = 20

@@ -6,12 +6,15 @@
 const STORAGE_EXPENSE_FLOOR = 0.35;
 const LTV_STORAGE           = 0.75;
 const LTV_RESI              = 0.80;
-const RATE_BANK_STORAGE     = 0.0725;
-const AMORT_BANK_STORAGE    = 25;
+const LTV_COMMERCIAL        = 0.65;
+const RATE_BANK_STORAGE     = 0.07;
+const AMORT_BANK_STORAGE    = 30;
 const RATE_BANK_RESI        = 0.0700;
 const AMORT_BANK_RESI       = 30;
+const RATE_BANK_COMMERCIAL  = 0.07;
+const AMORT_BANK_COMMERCIAL = 30;
 const DSCR_CONSERVATIVE     = 1.25;
-const DSCR_STRETCH          = 1.15;
+const DSCR_STRETCH          = 1.10;
 const MAO_FACTOR            = 0.70;
 const WHOLESALE_FEE         = 10000;
 const POCKET_FLOOR          = 10000;
@@ -22,8 +25,9 @@ function annualK(rate, years) {
   return f * 12;
 }
 
-const K_BANK_STORAGE = annualK(RATE_BANK_STORAGE, AMORT_BANK_STORAGE);
-const K_BANK_RESI    = annualK(RATE_BANK_RESI,    AMORT_BANK_RESI);
+const K_BANK_STORAGE     = annualK(RATE_BANK_STORAGE, AMORT_BANK_STORAGE);
+const K_BANK_RESI        = annualK(RATE_BANK_RESI,    AMORT_BANK_RESI);
+const K_BANK_COMMERCIAL  = annualK(RATE_BANK_COMMERCIAL, AMORT_BANK_COMMERCIAL);
 
 // Storage NOI with expense floor enforcement (the critical test)
 function storageNOI(grossDollarsIn, sellerStatedExpensePct) {
@@ -117,11 +121,35 @@ export default function handler(req, res) {
 
     if (type === 'constants') {
       return res.json({ ok: true, type, result: {
-        STORAGE_EXPENSE_FLOOR, LTV_STORAGE, LTV_RESI,
+        STORAGE_EXPENSE_FLOOR, LTV_STORAGE, LTV_RESI, LTV_COMMERCIAL,
         RATE_BANK_STORAGE, AMORT_BANK_STORAGE, K_BANK_STORAGE,
         RATE_BANK_RESI, AMORT_BANK_RESI, K_BANK_RESI,
+        RATE_BANK_COMMERCIAL, AMORT_BANK_COMMERCIAL, K_BANK_COMMERCIAL,
         DSCR_CONSERVATIVE, DSCR_STRETCH, MAO_FACTOR, WHOLESALE_FEE, POCKET_FLOOR
       }});
+    }
+
+    if (type === 'standards') {
+      const assetType = inputs.asset_type || 'commercial';
+      if (assetType === 'commercial') {
+        return res.json({ ok: true, type, assetClass: 'commercial', assumptions: {
+          rate: RATE_BANK_COMMERCIAL,
+          amort: AMORT_BANK_COMMERCIAL,
+          ltv: LTV_COMMERCIAL,
+          dscrConservative: DSCR_CONSERVATIVE,
+          dscrStretch: DSCR_STRETCH
+        }});
+      } else if (assetType === 'storage') {
+        return res.json({ ok: true, type, assetClass: 'storage', assumptions: {
+          rate: RATE_BANK_STORAGE,
+          amort: AMORT_BANK_STORAGE,
+          ltv: LTV_STORAGE,
+          expenseFloor: STORAGE_EXPENSE_FLOOR,
+          dscrConservative: DSCR_CONSERVATIVE,
+          dscrStretch: DSCR_STRETCH
+        }});
+      }
+      return res.status(400).json({ error: `Unknown asset_type: ${assetType}` });
     }
 
     return res.status(400).json({ error: `Unknown type: ${type}` });
