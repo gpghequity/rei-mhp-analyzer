@@ -38,10 +38,14 @@ function buildAuth() {
   if (_auth && _fingerprint === creds.client_email) {
     return { auth: _auth, fingerprint: creds.client_email };
   }
+  // Service accounts have no Drive storage quota, so file uploads require
+  // domain-wide delegation: impersonate a real Workspace user (IMPERSONATE_USER)
+  // who owns Drive storage — the same pattern rei-email-intake uses.
   _auth = new google.auth.JWT({
     email: creds.client_email,
     key: creds.private_key,
-    scopes: SCOPES
+    scopes: SCOPES,
+    subject: process.env.IMPERSONATE_USER || undefined
   });
   _fingerprint = creds.client_email;
   // Clients depend on auth — drop caches so they rebind to the new auth.
