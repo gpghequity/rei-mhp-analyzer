@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import QuickAnalysisTab from './components/QuickAnalysisTab.jsx'
 import StorageTab from './components/StorageTab.jsx'
 import ResidentialTab from './components/ResidentialTab.jsx'
 import MhpTab from './components/MhpTab.jsx'
@@ -7,6 +8,7 @@ import MixedUseTab from './components/MixedUseTab.jsx'
 import { parseSearchString } from './connectors/urlParams.js'
 
 const TABS = [
+  { id: 'quick', label: 'Quick Analysis', component: QuickAnalysisTab },
   { id: 'storage', label: 'Storage', component: StorageTab },
   { id: 'residential', label: 'Residential', component: ResidentialTab },
   { id: 'mhp', label: 'MHP', component: MhpTab },
@@ -14,8 +16,8 @@ const TABS = [
   { id: 'mixeduse', label: 'Mixed Use', component: MixedUseTab }
 ]
 
-const VERSION = '0.4.0'
-const BUILD_DATE = '2026-05-17'
+const VERSION = '0.5.0'
+const BUILD_DATE = '2026-06-01'
 
 // Read URL params once at module load — populates initial active tab + tab states.
 const initialUrlState = typeof window !== 'undefined'
