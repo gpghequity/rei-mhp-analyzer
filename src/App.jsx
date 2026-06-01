@@ -7,7 +7,9 @@ import MhpTab from './components/MhpTab.jsx'
 import CommercialTab from './components/CommercialTab.jsx'
 import MixedUseTab from './components/MixedUseTab.jsx'
 import LandTab from './components/LandTab.jsx'
+import QaTab from './components/QaTab.jsx'
 import { parseSearchString } from './connectors/urlParams.js'
+import { VERSION, BUILD_DATE } from './version.js'
 
 const TABS = [
   { id: 'analyze', label: 'Analyze a Deal', component: AnalyzeDealTab },
@@ -17,11 +19,9 @@ const TABS = [
   { id: 'mhp', label: 'MHP', component: MhpTab },
   { id: 'commercial', label: 'Commercial', component: CommercialTab },
   { id: 'mixeduse', label: 'Mixed Use', component: MixedUseTab },
-  { id: 'land', label: 'Land / IOS', component: LandTab }
+  { id: 'land', label: 'Land / IOS', component: LandTab },
+  { id: 'qa', label: 'QA Runner', component: QaTab }
 ]
-
-const VERSION = '0.6.0'
-const BUILD_DATE = '2026-06-01'
 
 // Read URL params once at module load — populates initial active tab + tab states.
 const initialUrlState = typeof window !== 'undefined'

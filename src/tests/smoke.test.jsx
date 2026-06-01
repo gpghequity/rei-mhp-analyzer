@@ -47,4 +47,19 @@ describe('App skeleton', () => {
     expect(screen.getByRole('heading', { name: /Commercial/i })).toBeInTheDocument()
     expect(screen.getByText(/DSCR/i)).toBeInTheDocument()
   })
+
+  it('QA Runner tab loads without crashing', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'QA Runner' }))
+    expect(screen.getByRole('heading', { name: /Baby Analyzer QA Runner/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Run all QA tests/i })).toBeInTheDocument()
+  })
+
+  it('Land / IOS tab loads without crashing', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Land / IOS' }))
+    expect(screen.getByRole('heading', { name: /Land \/ IOS \/ Outdoor Storage/i })).toBeInTheDocument()
+  })
 })

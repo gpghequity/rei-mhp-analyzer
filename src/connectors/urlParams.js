@@ -70,7 +70,7 @@ export function parseSearchString(search) {
 function validTab(t) {
   if (!t) return null
   const lower = String(t).toLowerCase()
-  return ['storage', 'residential', 'mhp', 'commercial'].includes(lower) ? lower : null
+  return ['storage', 'residential', 'mhp', 'commercial', 'land', 'qa'].includes(lower) ? lower : null
 }
 
 function validResidentialMode(m) {
