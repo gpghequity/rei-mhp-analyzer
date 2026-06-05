@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { freshSystems, SIZING_FIELDS, RATE_SOURCE, TIER_LABELS, STANDARD_TIER_KEYS, OVERALL_TIERS } from '../../math/rehab/rehabSystems.js'
 import { calcRehab, explainRow, pricesByCondition, pricesByConditionPerCount, resolveDefaultCount, isRowHidden, nationalTotal } from '../../math/rehab/rehabMath.js'
 
@@ -22,11 +22,35 @@ export default function RehabSection({ mode = 'residential', seed = {}, onTotalC
   })
   const [systems, setSystems] = useState(() => freshSystems(mode))
   const [overallTier, setOverallTier] = useState('medium_rehab')
+  // Flat override — type one number and skip the line items entirely.
+  const [flat, setFlat] = useState('')
+  const flatNum = Number(flat) > 0 ? Math.round(Number(flat)) : null
+
+  // Keep the sizing (square footage etc.) in sync with the deal's numbers coming
+  // from the form/comps, until the operator overrides a field by hand. Without
+  // this the area stays blank and every condition price computes to $0.
+  const editedRef = useRef(new Set())
+  const seedKey = JSON.stringify(seed || {})
+  useEffect(() => {
+    setSizing(prev => {
+      const next = { ...prev }; let changed = false
+      sizingFields.forEach(f => {
+        const sv = seed?.[f.key]
+        if (sv != null && sv !== '' && !editedRef.current.has(f.key) && String(prev[f.key] ?? '') !== String(sv)) {
+          next[f.key] = sv; changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [seedKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recompute on every change; surface BOTH totals (Steve's line-item engine and
   // the national $/sf benchmark) to the parent.
   const result = useMemo(() => calcRehab(systems, sizing), [systems, sizing])
   const nat = useMemo(() => nationalTotal(mode, sizing, overallTier), [mode, sizing, overallTier])
+  // The number that actually feeds the offer math: the flat override if set,
+  // otherwise the line-item total.
+  const reportedTotal = flatNum != null ? flatNum : result.totalRehab
   // Per-line breakdown (label + chosen condition/budget + $) for the report.
   const breakdown = useMemo(() => {
     const condById = {}
@@ -38,10 +62,10 @@ export default function RehabSection({ mode = 'residential', seed = {}, onTotalC
     return result.lineItems.map(li => ({ id: li.id, label: li.label, condition: condById[li.id] || '—', total: li.total }))
   }, [systems, result])
   useEffect(() => {
-    onTotalChange?.(result.totalRehab, { ...result, national: nat, breakdown })
-  }, [result.totalRehab, nat.total]) // eslint-disable-line react-hooks/exhaustive-deps
+    onTotalChange?.(reportedTotal, { ...result, totalRehab: reportedTotal, lineItemTotal: result.totalRehab, flatOverride: flatNum, national: nat, breakdown })
+  }, [reportedTotal, nat.total]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setSizeField = (k, v) => setSizing(p => ({ ...p, [k]: v }))
+  const setSizeField = (k, v) => { editedRef.current.add(k); setSizing(p => ({ ...p, [k]: v })) }
   const patchSystem = (id, patch) => setSystems(p => p.map(s => s.id === id ? { ...s, ...patch } : s))
 
   const visible = systems.filter(s => !isRowHidden(s, sizing))
@@ -51,6 +75,18 @@ export default function RehabSection({ mode = 'residential', seed = {}, onTotalC
       <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>
         Rates: <b>{RATE_SOURCE[mode]}</b>. Pick a condition (or budget) per system — the total feeds the offer math below.
       </p>
+
+      {/* Flat override — one number, skip the line items */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 10, padding: '10px 12px', background: '#fff7e6', border: '1px solid #e3c685', borderRadius: 8 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ ...lbl, margin: '0 0 3px' }}>Flat rehab total — skip the line items below</label>
+          <input style={inp} inputMode="decimal" value={flat} placeholder="e.g. 45000"
+            onChange={e => setFlat(e.target.value.replace(/[^0-9.]/g, ''))} />
+        </div>
+        {flatNum != null
+          ? <div style={{ fontSize: 12, color: '#9a6700', fontWeight: 700, paddingBottom: 8 }}>Using {money(flatNum)} — line items ignored</div>
+          : <div style={{ fontSize: 11, color: '#9a6700', paddingBottom: 8, maxWidth: 220 }}>Leave blank to build it up from the condition lines below.</div>}
+      </div>
 
       {/* Sizing inputs that scale the formulas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 8, padding: '10px', background: '#f1f3f7', borderRadius: 8, marginBottom: 10 }}>
@@ -63,8 +99,8 @@ export default function RehabSection({ mode = 'residential', seed = {}, onTotalC
         ))}
       </div>
 
-      {/* One row per system */}
-      <div style={{ display: 'grid', gap: 6 }}>
+      {/* One row per system — dimmed when a flat override is in effect */}
+      <div style={{ display: 'grid', gap: 6, opacity: flatNum != null ? 0.45 : 1, pointerEvents: flatNum != null ? 'none' : 'auto' }}>
         {visible.map(s => <Row key={s.id} system={s} sizing={sizing} onChange={patch => patchSystem(s.id, patch)} />)}
       </div>
 
@@ -83,8 +119,8 @@ export default function RehabSection({ mode = 'residential', seed = {}, onTotalC
       <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ padding: '10px 14px', background: '#0A0F2C', color: '#fff', borderRadius: 8 }}>
           <div style={{ fontWeight: 700, color: '#C9A84C', fontSize: 12 }}>Total — your numbers</div>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>{money(result.totalRehab)}</div>
-          <div style={{ fontSize: 10, color: '#cdd6ec' }}>{RATE_SOURCE[mode]}</div>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>{money(reportedTotal)}</div>
+          <div style={{ fontSize: 10, color: '#cdd6ec' }}>{flatNum != null ? 'Flat override (line items ignored)' : RATE_SOURCE[mode]}</div>
         </div>
         <div style={{ padding: '10px 14px', background: '#1E2A45', color: '#fff', borderRadius: 8 }}>
           <div style={{ fontWeight: 700, color: '#C9A84C', fontSize: 12 }}>Total — national average</div>
