@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PROPERTY_TYPES, getType, num } from './analyze/typeMap.js'
 import { buildIncomeMatrix, isIncomeAsset } from './analyze/incomeMatrix.js'
 import { storageNOI } from '../math/storage.js'
@@ -12,7 +12,9 @@ import MhpTab from './MhpTab.jsx'
 import CommercialTab from './CommercialTab.jsx'
 import MixedUseTab from './MixedUseTab.jsx'
 import LandTab from './LandTab.jsx'
-import RehabSection from './analyze/RehabSection.jsx'
+// Rehab is its OWN silo (rei-rehab-calc) — embedded here, never copied in. The
+// total flows back via postMessage. One home for the rehab logic.
+const REHAB_CALC_URL = 'https://rei-rehab-calc.vercel.app'
 import PortfolioSection from './analyze/PortfolioSection.jsx'
 import { NATIONAL_PSF, REGIONAL_ADJ, toBenchmarkTier } from '../math/rehab/rehabSystems.js'
 
@@ -321,6 +323,60 @@ function CompEvidence({ subject, comps }) {
   )
 }
 
+// Embed the rei-rehab-calc SILO (not a copy). Lazy-loads on click so the deal's
+// address + sqft are known when it opens, pre-fills the silo via URL params, and
+// receives the rehab total back via postMessage → feeds the offer math.
+function RehabEmbed({ mode, address, sqft, units, onResult }) {
+  const [src, setSrc] = useState('')
+  const build = () => {
+    const siloMode = mode === 'storage' ? 'storage' : 'residential'
+    const p = new URLSearchParams({ embed: '1', mode: siloMode })
+    if (address) p.set('address', address)
+    if (num(sqft)) p.set('sqft', String(num(sqft)))
+    if (num(units)) p.set('units', String(num(units)))
+    setSrc(`${REHAB_CALC_URL}/?${p.toString()}`)
+  }
+  useEffect(() => {
+    function onMsg(e) {
+      const d = e.data
+      if (!d || d.type !== 'rei-rehab-total') return
+      const breakdown = (d.lineItems || []).map(li => ({ id: li.id, label: li.label, condition: '', total: li.total }))
+      onResult?.(Number(d.totalRehab) || 0, { breakdown, holdingCost: d.holdingCost, grandTotal: d.grandTotal, flatOverride: d.flatOverride })
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [onResult])
+  const btn = { padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 6, border: '1px solid #0A0F2C', background: '#0A0F2C', color: '#C9A84C', cursor: 'pointer' }
+  const isCommercial = mode === 'commercial'
+  return (
+    <div>
+      {!src ? (
+        <div>
+          <button type="button" onClick={build} style={btn}>
+            Open Rehab Calc{num(sqft) ? ` — uses this deal’s address & ${num(sqft).toLocaleString()} sf` : ' — enter sqft above for live line pricing'}
+          </button>
+          <p style={{ ...srcStyle, marginTop: 6 }}>
+            This is the live Rehab Calc tool (its own silo) embedded here — the number you land on flows straight into the offer above. Or just use the flat-total box inside it.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <span style={srcStyle}>Live Rehab Calc silo — your total feeds the offer automatically.</span>
+            <button type="button" onClick={build} style={{ ...btn, padding: '5px 10px', fontSize: 12 }}>↻ Reload with current sqft</button>
+          </div>
+          {isCommercial && (
+            <p style={{ ...srcStyle, color: '#C8851A', marginTop: 0 }}>
+              Commercial line-items aren’t in the Rehab Calc silo yet (residential baseline shown) — use the flat-total box inside it for commercial rehab. Adding commercial lines to the silo is the next step.
+            </p>
+          )}
+          <iframe title="Rehab Calc" src={src} style={{ width: '100%', height: 640, border: '1px solid #d4dae8', borderRadius: 8, background: '#fff' }} />
+        </>
+      )}
+    </div>
+  )
+}
+
 // Plain-English math rows (replaces the raw JSON dump).
 function MathRows({ rows }) {
   if (!rows || !rows.length) return null
@@ -604,14 +660,9 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
       : null
   const activeFields = (type.fields || []).filter(f => !f.modes || f.modes.includes(mode))
   const set = (k, v) => setFields(p => ({ ...p, [k]: v }))
-  // Embedded condition→rehab calculator: residential (flip), storage, commercial.
+  // Rehab is the rei-rehab-calc SILO, embedded (see RehabEmbed) — not a copy here.
   const rehabMode = REHAB_MODE[typeId] || 'residential'
   const showRehab = true // every property type & mode shows the rehab questions (per Steve)
-  const rehabSeed = typeId === 'residential'
-    ? { units: num(fields.units) || 1, sqFtPerUnit: (num(fields.sqft) && num(fields.units)) ? Math.round(num(fields.sqft) / num(fields.units)) : (num(fields.sqft) || ''), commonSqFt: 0, stories: num(fields.stories) || 1 }
-    : typeId === 'self_storage'
-      ? { totalUnits: fields.totalUnits, roofSqFt: fields.netRentableSqft, exteriorSqFt: fields.netRentableSqft }
-      : { buildingSqFt: fields.sqft, roofSqFt: fields.sqft }
 
   async function analyze() {
     setError(null); setResult(null)
@@ -926,7 +977,22 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
       {showRehab && (
         <div style={card} className="no-print">
           <h3 style={h3}>3 · Property Condition → Rehab Estimate</h3>
-          <RehabSection mode={rehabMode} seed={rehabSeed} onTotalChange={(total, detail) => { setRehabCondition(total); setRehabDetail(detail) }} />
+          <RehabEmbed
+            mode={rehabMode}
+            address={fields.address}
+            sqft={fields.sqft}
+            units={fields.units}
+            onResult={(total, detail) => {
+              setRehabCondition(total)
+              // National-average cross-check from the benchmark constant (a small
+              // snapshot, not the rehab tool) so the report keeps that column.
+              const area = num(fields.sqft) || 0
+              const national = area > 0
+                ? { area, psf: Math.round(NATIONAL_PSF.medium_rehab * REGIONAL_ADJ), total: Math.round(area * NATIONAL_PSF.medium_rehab * REGIONAL_ADJ), tier: 'medium' }
+                : null
+              setRehabDetail({ ...detail, national })
+            }}
+          />
         </div>
       )}
 
