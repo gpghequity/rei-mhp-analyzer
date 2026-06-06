@@ -2,22 +2,26 @@
 // Self-contained: inlines Baby Analyzer math so Node runtime has no Vite deps.
 // Called by rei-math-regression weekly. Not exposed in the UI.
 
-// ── Constants (Math Bible v3 snapshot, same as src/config/defaults.json) ──
-const STORAGE_EXPENSE_FLOOR = 0.35;
-const LTV_STORAGE           = 0.75;
-const LTV_RESI              = 0.80;
-const LTV_COMMERCIAL        = 0.75;  // Same as storage (Math Bible v3)
-const RATE_BANK_STORAGE     = 0.0725;
-const AMORT_BANK_STORAGE    = 25;
-const RATE_BANK_RESI        = 0.0700;
-const AMORT_BANK_RESI       = 30;
-const RATE_BANK_COMMERCIAL  = 0.0725;  // Same as storage (Math Bible v3)
-const AMORT_BANK_COMMERCIAL = 25;     // Same as storage (Math Bible v3)
-const DSCR_CONSERVATIVE     = 1.25;
-const DSCR_STRETCH          = 1.10;
-const MAO_FACTOR            = 0.70;
-const WHOLESALE_FEE         = 10000;
-const POCKET_FLOOR          = 10000;
+// ── Read from canonical Bible at runtime (no local copies) ──
+const { getBible } = require('../../shared-underwriting-standards/bible-reader');
+const BIBLE = getBible();
+
+// Extract constants from Bible into local scope for calculation functions
+const STORAGE_EXPENSE_FLOOR = BIBLE.GLOBAL.STORAGE_EXPENSE_FLOOR;
+const LTV_STORAGE           = BIBLE.GLOBAL.LTV_STORAGE;
+const LTV_RESI              = BIBLE.GLOBAL.LTV_RESI;
+const LTV_COMMERCIAL        = BIBLE.GLOBAL.LTV_COMMERCIAL;
+const RATE_BANK_STORAGE     = BIBLE.GLOBAL.RATE_BANK_STORAGE;
+const AMORT_BANK_STORAGE    = BIBLE.GLOBAL.AMORT_BANK_STORAGE;
+const RATE_BANK_RESI        = BIBLE.GLOBAL.RATE_BANK_RESI;
+const AMORT_BANK_RESI       = BIBLE.GLOBAL.AMORT_BANK_RESI;
+const RATE_BANK_COMMERCIAL  = BIBLE.GLOBAL.RATE_BANK_COMMERCIAL;
+const AMORT_BANK_COMMERCIAL = BIBLE.GLOBAL.AMORT_BANK_COMMERCIAL;
+const DSCR_CONSERVATIVE     = BIBLE.GLOBAL.DSCR_CONSERVATIVE;
+const DSCR_STRETCH          = BIBLE.GLOBAL.DSCR_STRETCH;  // NOW READS FROM BIBLE: 1.15 (not hardcoded 1.10)
+const MAO_FACTOR            = BIBLE.GLOBAL.arvMultiplier;
+const WHOLESALE_FEE         = BIBLE.GLOBAL.WHOLESALE_FEE;
+const POCKET_FLOOR          = BIBLE.GLOBAL.POCKET_FLOOR;
 
 function annualK(rate, years) {
   const r = rate / 12, n = years * 12;
