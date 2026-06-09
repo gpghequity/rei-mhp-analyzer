@@ -61,6 +61,11 @@ app.get('/healthz', (req, res) => {
   });
 });
 
+// ── Config (Sheet ID for results link) ──
+app.get('/api/sheet-id', (req, res) => {
+  res.json({ sheet_id: process.env.GOOGLE_SHEETS_ID || null });
+});
+
 // SPA fallback — never cache the entry document.
 app.get('*', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

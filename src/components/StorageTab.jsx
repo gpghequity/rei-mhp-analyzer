@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { storageNOI, groupA_maxPurchase, groupA_equityRequirement, groupB_maxPurchase, groupC_maxPurchase, pocketCash } from '../math/storage.js'
 import { sunsetTest } from '../math/sunsetTest.js'
 import { rampTest } from '../math/rampTest.js'
@@ -233,6 +233,11 @@ const btnGhostStyle = {
 function StorageResults({ results, askingPrice }) {
   const { noiResult, scenarios, kickerProj, verdict } = results
   const noi = noiResult.noi
+  const [sheetId, setSheetId] = useState(null)
+
+  useEffect(() => {
+    fetch('/api/sheet-id').then(r => r.json()).then(d => setSheetId(d.sheet_id)).catch(() => {})
+  }, [])
 
   const groupA125 = scenarios.find(s => s.group === 'A' && s.dscrLens === 1.25 && s.treatment === 'sunk')
   const groupA115 = scenarios.find(s => s.group === 'A' && s.dscrLens === 1.15 && s.treatment === 'sunk')
@@ -243,6 +248,13 @@ function StorageResults({ results, askingPrice }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingTop: 16, borderTop: '2px solid #1a2456' }}>
       <Verdict verdict={verdict} />
+      {sheetId && (
+        <div style={{ fontSize: 12, color: '#7a869a' }}>
+          <a href={`https://docs.google.com/spreadsheets/d/${sheetId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0a1f44', textDecoration: 'underline' }}>
+            View all results in Sheet
+          </a>
+        </div>
+      )}
 
       <Card title="NOI">
         <Row label="Gross collected" value={formatMoney(noiResult.grossDollarsIn)} />
