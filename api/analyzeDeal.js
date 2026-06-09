@@ -17,6 +17,7 @@ import { findOrCreateDealFolder, uploadFile } from './drive.js';
 import { writeProperty } from './sheetIndex.js';
 import { extractDocsCore, extractPhotosCore } from './extract.js';
 import { enrichCore } from './enrich.js';
+import { expandZips } from './unzipFiles.js';
 
 function parseMeta(req) {
   const raw = req.body?.meta;
@@ -31,8 +32,11 @@ export async function analyzeDeal(req, res) {
     const { propertyType, address, city, state, zip, beds, baths, sqft, dealType } = meta;
     if (!address) return res.status(400).json({ ok: false, error: 'address required in meta' });
 
-    const docs = (req.files?.docs) || [];
-    const photos = (req.files?.photos) || [];
+    // Expand .zip files into individual docs/photos
+    let docs = (req.files?.docs) || [];
+    let photos = (req.files?.photos) || [];
+    docs = await expandZips(docs);
+    photos = await expandZips(photos);
 
     // 1) Folder (best-effort — analysis must not block on storage)
     const folder = await findOrCreateDealFolder(address, propertyType);
