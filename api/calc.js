@@ -3,7 +3,7 @@
 // Called by rei-math-regression weekly. Not exposed in the UI.
 
 // ── Read from canonical Bible at runtime (no local copies) ──
-import { getBible } from '../../shared-underwriting-standards/bible-reader.js';
+import { getBible } from 'shared-underwriting-standards/bible-reader';
 const BIBLE = getBible();
 
 // Extract constants from Bible into local scope for calculation functions
