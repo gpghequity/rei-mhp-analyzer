@@ -845,6 +845,8 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
       let calc = null, head = {}, calcTypeUsed = null, matrix = null, noiBasis = null
 
       // ── Income/NOI assets → standardized Financing Matrix (Math Bible engine) ──
+      // ALWAYS log to verify code is running + check state
+      console.log('[BA analyze] typeId=', typeId, 'isIncome=', isIncomeAsset(typeId), 'calcFields income=', { grossIncome: calcFields.grossIncome, expenses: calcFields.expenses })
       if (isIncomeAsset(typeId)) {
         const grossN = num(calcFields.grossIncome)
         const expDollars = num(calcFields.expenses)
@@ -854,6 +856,7 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
         if ((grossN > 0 || expRatio > 0) && matrixNOI === 0) {
           console.warn('[BA] Income asset with income but no NOI:', { grossN, expDollars, expRatio, calcFields })
         }
+        console.log('[BA] After NOI calc:', { grossN, expDollars, matrixNOI })
         if (matrixNOI > 0) {
           noiBasis = num(fields.noi) ? 'User-entered NOI' : 'Broker/OM NOI (no override)'
         } else if (grossN > 0) {
@@ -886,7 +889,9 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
             noiBasis = `Gross $${grossN.toLocaleString()} × (1 − ${Math.round(erUsed * 100)}% expense ratio)`
           }
         }
+        console.log('[BA] Building matrix?', matrixNOI > 0, 'matrixNOI=', matrixNOI)
         if (matrixNOI > 0) {
+          console.log('[BA] YES — building matrix with NOI=', matrixNOI)
           matrix = buildIncomeMatrix({ assetType: typeId, noi: matrixNOI })
           calcTypeUsed = 'Math Bible income engine (financing matrix)'
           head = {
