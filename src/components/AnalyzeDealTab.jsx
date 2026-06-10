@@ -674,6 +674,13 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
   async function analyze() {
     setError(null); setResult(null)
     if (!fields.address) { setError('Enter a property address.'); return }
+
+    // DIAGNOSTIC: If user selected income asset but no income in state, tell them exactly what we're seeing
+    if (isIncomeAsset(typeId) && !num(fields.grossIncome) && !num(fields.expenses) && !num(fields.noi)) {
+      setError(`DIAGNOSTIC: Selected ${getType(typeId).label} but no income found in form state. Form shows income but state is empty. This is a form-state sync bug. Fields in state: ${JSON.stringify(fields)}`)
+      return
+    }
+
     setPhase('running')
     try {
       // 1) Orchestrate: store uploads + call extractor / photo / comps server-side.
