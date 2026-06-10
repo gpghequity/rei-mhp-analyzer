@@ -642,7 +642,14 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
   const [portfolio, setPortfolio] = useState(false)
   const [rehabCondition, setRehabCondition] = useState(0) // manual condition → rehab $ (your numbers)
   const [rehabDetail, setRehabDetail] = useState(null)    // { national: {area, psf, tier, total}, ... }
-  const [fields, setFields] = useState({ address: '', city: '', state: '', zip: '' })
+  const [fields, setFields] = useState({
+    address: '', city: '', state: '', zip: '', user: '', contact: '',
+    askingPrice: '', arv: '', rehab: '', grossIncome: '', expenses: '', expenseRatio: '', noi: '',
+    purchase: '', capRate: '', yearBuilt: '', stories: '', beds: '', baths: '', sqft: '', units: '',
+    totalUnits: '', climateUnits: '', netRentableSqft: '', occupancy: '',
+    lots: '', lotRent: '', pohUnits: '', pohRent: '',
+    sites: '', siteRent: '', acres: '', leasableSqft: ''
+  })
   const [docs, setDocs] = useState([])
   const [photos, setPhotos] = useState([])
   const [pastedText, setPastedText] = useState('') // dump an agent email / notes here
@@ -794,7 +801,7 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
 
       // 2) Compute headline via existing bible math (/api/calc). User fields win; extracted fills gaps.
       // CRITICAL: calcFields must include manual form values even if extraction fails.
-      // Line 792 ensures this: calcFields = {...fields} copies the form state BEFORE extraction fallback.
+      // Make a copy of the current form state, THEN merge extraction gaps.
       const calcFields = { ...fields }
       // Only merge extracted data into gaps — never overwrite manual user entry.
       if (extractedNorm) {
@@ -845,11 +852,12 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
       let calc = null, head = {}, calcTypeUsed = null, matrix = null, noiBasis = null
 
       // ── SIMPLE FIX: If user entered income, ALWAYS compute NOI + matrix ──
-      const grossN = num(calcFields.grossIncome)
-      const expDollars = num(calcFields.expenses)
-      const expRatio = num(calcFields.expenseRatio)
+      // READ DIRECTLY FROM FORM STATE, NOT JUST calcFields (defensive)
+      const grossN = num(calcFields.grossIncome || fields.grossIncome)
+      const expDollars = num(calcFields.expenses || fields.expenses)
+      const expRatio = num(calcFields.expenseRatio || fields.expenseRatio)
       const userHasIncome = grossN > 0 || expDollars > 0 || expRatio > 0
-      let matrixNOI = num(calcFields.noi)
+      let matrixNOI = num(calcFields.noi || fields.noi)
 
       // Compute NOI if user entered income (ignore typeId mismatch entirely)
       if (userHasIncome && !matrixNOI) {
@@ -909,7 +917,8 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
       const hasMath = Boolean(matrix) || Boolean(calc)
 
       // 3) Recommendation (transparent rule).
-      const manualIncome = num(calcFields.grossIncome) > 0 || num(calcFields.expenses) > 0 || num(calcFields.expenseRatio) > 0
+      // READ DIRECTLY FROM FORM STATE FOR INCOME DETECTION (defensive)
+      const manualIncome = num(fields.grossIncome) > 0 || num(fields.expenses) > 0 || num(fields.expenseRatio) > 0
       const rec = recommend({
         asking: calcFields.askingPrice, maxOffer: head.maxOffer, estValue: head.estValue,
         dscrPass: head.dscrPass, typeImplemented: type.implemented, hasMath,
