@@ -823,15 +823,11 @@ export default function AnalyzeDealTab({ sharedUrlState, deepUrlState }) {
       if (avm && typeId === 'residential' && !isIncomeAsset(typeId)) {
         if (mode === 'flip' && !num(calcFields.arv) && num(avm.value) > 0) {
           calcFields.arv = avm.value; compSeed.arv = true
-          // With NO rehab signal at all (no manual entry, no condition answers) but a
-          // known square footage, assume a medium national benchmark so the preliminary
-          // isn't an artificially-high $0-rehab ceiling. A manual rehab or condition
-          // answers (applied below) always take precedence.
-          const sf = num(calcFields.sqft)
-          if (!num(calcFields.rehab) && !(rehabCondition > 0) && sf > 0) {
-            calcFields.rehab = Math.round(sf * NATIONAL_PSF.medium_rehab * REGIONAL_ADJ)
-            compSeed.rehab = true
-          }
+          // DO NOT auto-seed rehab from national benchmark. Rehab must come from:
+          // 1. User manual entry, OR
+          // 2. Condition answers from the rehab tool
+          // National benchmarks can be wildly inaccurate for low-value markets
+          // (e.g., $49k rehab on a $63k house = negative offer).
         }
         if (mode === 'rental') {
           if (!num(calcFields.grossIncome) && num(avm.rent_estimate) > 0) {
