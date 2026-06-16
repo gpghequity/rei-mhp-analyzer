@@ -1367,6 +1367,181 @@ function Results({ r }) {
         </div>
       )}
 
+      {/* ZONE 2 — CALCULATIONS (non-income; income assets use the matrix above) */}
+      {!r.matrix && (
+      <div style={card}>
+        <h3 style={h3}>Baby Analyzer Calculations <span style={srcStyle}>(bible math — engine: {r.calcTypeUsed || 'none'})</span></h3>
+        {!r.calc && (r.isIncome
+          ? <p style={{ color: '#C8851A', fontWeight: 600 }}>No NOI yet — this asset type IS supported. Enter NOI, or Gross Income + Annual Expenses (or an expense ratio %), or upload an OM / T-12 that states them, then re-run. Raw data captured and saved.</p>
+          : <p style={{ color: '#C8851A', fontWeight: 600 }}>Insufficient inputs to compute — data captured and saved.</p>)}
+        {r.calc && (
+          <>
+            <OfferTiers tiers={offerTiers(r)} />
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#1E2A45', margin: '8px 0 2px' }}>How we got there</div>
+            <MathRows rows={humanMath(r)} />
+            {r.headline.noiUsed != null && (
+              <p style={srcStyle}>NOI used: {money(r.headline.noiUsed)} ({r.brokerNOI && r.calcNOI === r.brokerNOI ? 'broker NOI, no override entered' : 'user input / derived'}).</p>
+            )}
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 12, color: '#6b7280' }}>Developer view (raw calc output)</summary>
+              <pre style={{ background: '#f4f6fb', padding: 10, borderRadius: 6, overflow: 'auto', fontSize: 12 }}>{JSON.stringify(r.calc, null, 2)}</pre>
+            </details>
+          </>
+        )}
+      </div>
+      )}
+
+      {/* REHAB — human vs photo, each priced your-numbers vs national-average */}
+      {(r.rehabCondition != null || r.rehabPhoto != null) && (
+        <div style={card}>
+          <h3 style={h3}>Rehab — Human vs Photo · Your Numbers vs National Average</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 420 }}>
+              <thead><tr>
+                {['Source', 'Your numbers'].map((h, i) => (
+                  <th key={i} style={{ padding: '6px 10px', background: '#0A0F2C', color: '#fff', fontSize: 12, textAlign: i ? 'right' : 'left' }}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '6px 10px', fontWeight: 600, borderBottom: '1px solid #eef1f7' }}>Human (condition answers)</td>
+                  <td style={{ padding: '6px 10px', textAlign: 'right', borderBottom: '1px solid #eef1f7' }}>{money(r.rehabCondition)}</td>
+                </tr>
+                <tr style={{ background: '#f7f9fd' }}>
+                  <td style={{ padding: '6px 10px', fontWeight: 600 }}>Photo (pic-rehab read)</td>
+                  <td style={{ padding: '6px 10px', textAlign: 'right' }}>{r.rehabPhoto != null ? money(r.rehabPhoto) : '—'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p style={srcStyle}>
+            {r.rehabUsed != null
+              ? `Offer math used ${money(r.rehabUsed)} (your Rehab Calc estimates).`
+              : "Enter property condition above (or upload photos) to drive the rehab number into the offer."}
+            {" "}Line-by-line breakdown shows what you selected in Rehab Calc by system and condition. National per-system benchmarks pending (Remodeling Magazine data).
+          </p>
+
+          {/* Per-line: human condition + $ (your numbers) vs photo-assessed condition */}
+          {r.rehabBreakdown && r.rehabBreakdown.length > 0 && (
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Line-by-line — your condition &amp; $ vs the photo read</summary>
+              <div style={{ overflowX: 'auto', marginTop: 6 }}>
+                <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600 }}>
+                  <thead><tr>{['System', 'Your condition', 'Calculation', 'Your $'].map((hh, i) => (
+                    <th key={i} style={{ padding: '5px 8px', background: '#1E2A45', color: '#fff', fontSize: 11, textAlign: i === 0 ? 'left' : i === 3 ? 'right' : 'center' }}>{hh}</th>
+                  ))}</tr></thead>
+                  <tbody>
+                    {r.rehabBreakdown.filter(li => li.id !== 'holding').map((li, i) => (
+                      <tr key={li.id} style={{ background: i % 2 ? '#f7f9fd' : '#fff' }}>
+                        <td style={{ padding: '5px 8px', fontWeight: 600 }}>{li.label}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'center' }}>{li.condition}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'center', fontSize: 12, color: '#666', fontFamily: 'monospace' }}>{li.breakdown || '—'}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600 }}>{money(li.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={srcStyle}>"Photo says" is pic-rehab's per-system read where the photos covered that system (—  = not assessed). Your $ uses your locked Rehab Calc numbers.</p>
+            </details>
+          )}
+        </div>
+      )}
+
+      {/* BROKER vs CALCULATED NOI */}
+      <div style={card}>
+        <h3 style={h3}>Broker vs Calculated NOI</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <Val label="Broker / OM Stated NOI" value={money(r.brokerNOI)} source="Extracted document" />
+          <Val label="Baby Analyzer NOI" value={money(r.calcNOI)} source="Baby Analyzer" />
+          <Val label="Difference" value={r.noiDelta != null ? money(r.noiDelta) : '—'} source="Calculated − Broker" />
+        </div>
+        {r.noiDelta != null && Math.abs(r.noiDelta) > 0 && (
+          <p style={srcStyle}>Difference reflects expense-floor enforcement / actual (not pro-forma) figures used by Baby Analyzer.</p>
+        )}
+      </div>
+
+      {/* COMP REVIEW */}
+      <div style={card}>
+        <h3 style={h3}>Comp Review</h3>
+        {!comps || comps.ok === false ? <p style={srcStyle}>No comp data{comps?.error ? `: ${comps.error}` : ''}.</p> : (
+          <>
+            {r.isIncome
+              ? <p style={{ fontSize: 13, color: '#6b7280' }}><b>Note:</b> for income property, value is driven by the NOI/DSCR matrix above, not a residential AVM. The figures below are residential-style estimates shown for reference only.</p>
+              : null}
+            <Val label={r.isIncome ? 'Residential AVM (reference only — not used for income valuation)' : 'AVM / Estimated Market Value'} value={money(comps.avm?.value)} source={comps.avm?.source || 'Data Enrichment'} />
+            {comps.avm && (comps.avm.low || comps.avm.high) && <Val label="AVM Range" value={`${money(comps.avm.low)} – ${money(comps.avm.high)}`} source={comps.avm.source} />}
+            <TwoCompSources primary={comps.avm} secondary={comps.avm2} />
+            <CompEvidence subject={comps.subject} comps={comps.comparables} />
+            {comps.avm?.rent_estimate != null && <Val label="Rent Estimate" value={money(comps.avm.rent_estimate) + '/mo'} source={comps.avm.source} />}
+            {comps.compContext && <p><b>Comp context:</b> {comps.compContext} <span style={srcStyle}>({comps.sources?.comps || 'Data Enrichment'})</span></p>}
+            {comps.flood && <Val label="Flood Zone" value={`${comps.flood.zone || '—'}${comps.flood.sfha ? ' (SFHA — high risk)' : ''}`} source="FEMA via Data Enrichment" />}
+            {comps.crime && comps.crime.score != null && <Val label="Neighborhood Safety" value={`${comps.crime.score}/100 ${comps.crime.label ? '(' + comps.crime.label + ')' : ''}`} source="FBI/Census via Data Enrichment" />}
+            {comps.demographics && <Val label="Median Household Income" value={money(comps.demographics.medianIncome)} source="Census ACS via Data Enrichment" />}
+            {comps.demographics && comps.demographics.population != null && <Val label="Area Population / Poverty" value={`${Number(comps.demographics.population).toLocaleString()}${comps.demographics.povertyRate ? ' · ' + comps.demographics.povertyRate + ' poverty' : ''}`} source="Census ACS via Data Enrichment" />}
+          </>
+        )}
+      </div>
+
+      {/* DATA SOURCES — full ledger of every service queried */}
+      <DataSources sources={comps?.allSources} counts={comps?.sourceCounts} />
+
+      {/* DOCUMENT FINDINGS */}
+      <div style={card}>
+        <h3 style={h3}>Document Findings</h3>
+        {r.extractorError && (
+          <div style={{ marginBottom: 8, padding: '10px 14px', background: '#fdeaea', border: '1px solid #B23030', borderRadius: 6 }}>
+            <b style={{ color: '#B23030' }}>Extractor problem:</b> <span>{r.extractorError}</span>
+          </div>
+        )}
+        {!r.extractedRaw ? <p style={srcStyle}>No documents uploaded.</p> : (
+          <>
+            <Val label="Extractor endpoint" value={r.extractedRaw.endpoint || '—'} source="rei-doc-reader" />
+            <Val label="Detected asset type" value={ex?.assetType || '—'} source="Extractor" />
+            <details><summary style={{ cursor: 'pointer', fontWeight: 600 }}>Full extractor payload</summary>
+              <pre style={{ background: '#f4f6fb', padding: 10, borderRadius: 6, overflow: 'auto', fontSize: 12 }}>{JSON.stringify(r.extractedRaw, null, 2)}</pre>
+            </details>
+          </>
+        )}
+      </div>
+
+      {/* PHOTO FINDINGS + REHAB */}
+      <div style={card}>
+        <h3 style={h3}>Photo Findings & Rehab Analysis</h3>
+        {!ph ? <p style={srcStyle}>No photos analyzed.</p> : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Val label="Overall Condition Tier" value={ph.overall_condition_tier || '—'} source="Photo Analyzer" />
+              <Val label="Photos Analyzed" value={ph.photos_analyzed ?? '—'} source="Photo Analyzer" />
+              <Val label="Rehab Estimate (mid)" value={money(ph.rehab_estimate_mid)} source={`Photo-assisted tier × sqft (${ph.basis || 'benchmark'})`} />
+              <Val label="Rehab Range" value={`${money(ph.rehab_estimate_low)} – ${money(ph.rehab_estimate_high)}`} source="±15% band, Photo Analyzer" />
+            </div>
+            {ph.per_system_tiers && (
+              <div style={{ marginTop: 8 }}>
+                <b>Per-system condition (basis for rehab tier):</b>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, marginTop: 4 }}>
+                  {Object.entries(ph.per_system_tiers).map(([k, v]) => <div key={k} style={{ fontSize: 13 }}>{k}: <b>{v}</b></div>)}
+                </div>
+              </div>
+            )}
+            {ph.explanation_one_line && <p style={srcStyle}>{ph.explanation_one_line}</p>}
+          </>
+        )}
+      </div>
+
+      {/* ASSUMPTIONS + MISSING INFO */}
+      <div style={card}>
+        <h3 style={h3}>Assumptions & Missing Information</h3>
+        <p style={{ fontSize: 13 }}><b>Assumptions used:</b> bible-math defaults (LTV, lender rate/amortization, DSCR target, wholesale fee) from /api/calc; expense ratio defaults to 40% when not provided.</p>
+        {r.missing.length > 0
+          ? <div><b style={{ color: '#C8851A' }}>Missing (analysis treated as incomplete):</b><ul>{r.missing.map((m, i) => <li key={i}>{m}</li>)}</ul></div>
+          : <p style={{ color: '#2F7A40' }}>No required fields flagged missing.</p>}
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+      {/* DATA SECTIONS — Moved to bottom (referenced for completeness, not primary) */}
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+
       {/* SIDE-BY-SIDE RESULTS COMPARISON — Manual vs Extracted */}
       {r && r.fields && r.extracted && (
         <div style={card}>
@@ -1564,177 +1739,6 @@ function Results({ r }) {
           </div>
         )}
         {ex?.redFlags?.length > 0 && <p style={{ color: '#B23030' }}><b>Document red flags:</b> {ex.redFlags.join('; ')}</p>}
-      </div>
-
-      {/* ZONE 2 — CALCULATIONS (non-income; income assets use the matrix above) */}
-      {!r.matrix && (
-      <div style={card}>
-        <h3 style={h3}>Baby Analyzer Calculations <span style={srcStyle}>(bible math — engine: {r.calcTypeUsed || 'none'})</span></h3>
-        {!r.calc && (r.isIncome
-          ? <p style={{ color: '#C8851A', fontWeight: 600 }}>No NOI yet — this asset type IS supported. Enter NOI, or Gross Income + Annual Expenses (or an expense ratio %), or upload an OM / T-12 that states them, then re-run. Raw data captured and saved.</p>
-          : <p style={{ color: '#C8851A', fontWeight: 600 }}>Insufficient inputs to compute — data captured and saved.</p>)}
-        {r.calc && (
-          <>
-            <OfferTiers tiers={offerTiers(r)} />
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#1E2A45', margin: '8px 0 2px' }}>How we got there</div>
-            <MathRows rows={humanMath(r)} />
-            {r.headline.noiUsed != null && (
-              <p style={srcStyle}>NOI used: {money(r.headline.noiUsed)} ({r.brokerNOI && r.calcNOI === r.brokerNOI ? 'broker NOI, no override entered' : 'user input / derived'}).</p>
-            )}
-            <details style={{ marginTop: 8 }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 12, color: '#6b7280' }}>Developer view (raw calc output)</summary>
-              <pre style={{ background: '#f4f6fb', padding: 10, borderRadius: 6, overflow: 'auto', fontSize: 12 }}>{JSON.stringify(r.calc, null, 2)}</pre>
-            </details>
-          </>
-        )}
-      </div>
-      )}
-
-      {/* REHAB — human vs photo, each priced your-numbers vs national-average */}
-      {(r.rehabCondition != null || r.rehabPhoto != null) && (
-        <div style={card}>
-          <h3 style={h3}>Rehab — Human vs Photo · Your Numbers vs National Average</h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 420 }}>
-              <thead><tr>
-                {['Source', 'Your numbers'].map((h, i) => (
-                  <th key={i} style={{ padding: '6px 10px', background: '#0A0F2C', color: '#fff', fontSize: 12, textAlign: i ? 'right' : 'left' }}>{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                <tr>
-                  <td style={{ padding: '6px 10px', fontWeight: 600, borderBottom: '1px solid #eef1f7' }}>Human (condition answers)</td>
-                  <td style={{ padding: '6px 10px', textAlign: 'right', borderBottom: '1px solid #eef1f7' }}>{money(r.rehabCondition)}</td>
-                </tr>
-                <tr style={{ background: '#f7f9fd' }}>
-                  <td style={{ padding: '6px 10px', fontWeight: 600 }}>Photo (pic-rehab read)</td>
-                  <td style={{ padding: '6px 10px', textAlign: 'right' }}>{r.rehabPhoto != null ? money(r.rehabPhoto) : '—'}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p style={srcStyle}>
-            {r.rehabUsed != null
-              ? `Offer math used ${money(r.rehabUsed)} (your Rehab Calc estimates).`
-              : "Enter property condition above (or upload photos) to drive the rehab number into the offer."}
-            {" "}Line-by-line breakdown shows what you selected in Rehab Calc by system and condition. National per-system benchmarks pending (Remodeling Magazine data).
-          </p>
-
-          {/* Per-line: human condition + $ (your numbers) vs photo-assessed condition */}
-          {r.rehabBreakdown && r.rehabBreakdown.length > 0 && (
-            <details style={{ marginTop: 8 }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Line-by-line — your condition &amp; $ vs the photo read</summary>
-              <div style={{ overflowX: 'auto', marginTop: 6 }}>
-                <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600 }}>
-                  <thead><tr>{['System', 'Your condition', 'Calculation', 'Your $'].map((hh, i) => (
-                    <th key={i} style={{ padding: '5px 8px', background: '#1E2A45', color: '#fff', fontSize: 11, textAlign: i === 0 ? 'left' : i === 3 ? 'right' : 'center' }}>{hh}</th>
-                  ))}</tr></thead>
-                  <tbody>
-                    {r.rehabBreakdown.filter(li => li.id !== 'holding').map((li, i) => (
-                      <tr key={li.id} style={{ background: i % 2 ? '#f7f9fd' : '#fff' }}>
-                        <td style={{ padding: '5px 8px', fontWeight: 600 }}>{li.label}</td>
-                        <td style={{ padding: '5px 8px', textAlign: 'center' }}>{li.condition}</td>
-                        <td style={{ padding: '5px 8px', textAlign: 'center', fontSize: 12, color: '#666', fontFamily: 'monospace' }}>{li.breakdown || '—'}</td>
-                        <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600 }}>{money(li.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p style={srcStyle}>“Photo says” is pic-rehab’s per-system read where the photos covered that system (—  = not assessed). Your $ uses your locked Rehab Calc numbers.</p>
-            </details>
-          )}
-        </div>
-      )}
-
-      {/* BROKER vs CALCULATED NOI */}
-      <div style={card}>
-        <h3 style={h3}>Broker vs Calculated NOI</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <Val label="Broker / OM Stated NOI" value={money(r.brokerNOI)} source="Extracted document" />
-          <Val label="Baby Analyzer NOI" value={money(r.calcNOI)} source="Baby Analyzer" />
-          <Val label="Difference" value={r.noiDelta != null ? money(r.noiDelta) : '—'} source="Calculated − Broker" />
-        </div>
-        {r.noiDelta != null && Math.abs(r.noiDelta) > 0 && (
-          <p style={srcStyle}>Difference reflects expense-floor enforcement / actual (not pro-forma) figures used by Baby Analyzer.</p>
-        )}
-      </div>
-
-      {/* COMP REVIEW */}
-      <div style={card}>
-        <h3 style={h3}>Comp Review</h3>
-        {!comps || comps.ok === false ? <p style={srcStyle}>No comp data{comps?.error ? `: ${comps.error}` : ''}.</p> : (
-          <>
-            {r.isIncome
-              ? <p style={{ fontSize: 13, color: '#6b7280' }}><b>Note:</b> for income property, value is driven by the NOI/DSCR matrix above, not a residential AVM. The figures below are residential-style estimates shown for reference only.</p>
-              : null}
-            <Val label={r.isIncome ? 'Residential AVM (reference only — not used for income valuation)' : 'AVM / Estimated Market Value'} value={money(comps.avm?.value)} source={comps.avm?.source || 'Data Enrichment'} />
-            {comps.avm && (comps.avm.low || comps.avm.high) && <Val label="AVM Range" value={`${money(comps.avm.low)} – ${money(comps.avm.high)}`} source={comps.avm.source} />}
-            <TwoCompSources primary={comps.avm} secondary={comps.avm2} />
-            <CompEvidence subject={comps.subject} comps={comps.comparables} />
-            {comps.avm?.rent_estimate != null && <Val label="Rent Estimate" value={money(comps.avm.rent_estimate) + '/mo'} source={comps.avm.source} />}
-            {comps.compContext && <p><b>Comp context:</b> {comps.compContext} <span style={srcStyle}>({comps.sources?.comps || 'Data Enrichment'})</span></p>}
-            {comps.flood && <Val label="Flood Zone" value={`${comps.flood.zone || '—'}${comps.flood.sfha ? ' (SFHA — high risk)' : ''}`} source="FEMA via Data Enrichment" />}
-            {comps.crime && comps.crime.score != null && <Val label="Neighborhood Safety" value={`${comps.crime.score}/100 ${comps.crime.label ? '(' + comps.crime.label + ')' : ''}`} source="FBI/Census via Data Enrichment" />}
-            {comps.demographics && <Val label="Median Household Income" value={money(comps.demographics.medianIncome)} source="Census ACS via Data Enrichment" />}
-            {comps.demographics && comps.demographics.population != null && <Val label="Area Population / Poverty" value={`${Number(comps.demographics.population).toLocaleString()}${comps.demographics.povertyRate ? ' · ' + comps.demographics.povertyRate + ' poverty' : ''}`} source="Census ACS via Data Enrichment" />}
-          </>
-        )}
-      </div>
-
-      {/* DATA SOURCES — full ledger of every service queried */}
-      <DataSources sources={comps?.allSources} counts={comps?.sourceCounts} />
-
-      {/* DOCUMENT FINDINGS */}
-      <div style={card}>
-        <h3 style={h3}>Document Findings</h3>
-        {r.extractorError && (
-          <div style={{ marginBottom: 8, padding: '10px 14px', background: '#fdeaea', border: '1px solid #B23030', borderRadius: 6 }}>
-            <b style={{ color: '#B23030' }}>Extractor problem:</b> <span>{r.extractorError}</span>
-          </div>
-        )}
-        {!r.extractedRaw ? <p style={srcStyle}>No documents uploaded.</p> : (
-          <>
-            <Val label="Extractor endpoint" value={r.extractedRaw.endpoint || '—'} source="rei-doc-reader" />
-            <Val label="Detected asset type" value={ex?.assetType || '—'} source="Extractor" />
-            <details><summary style={{ cursor: 'pointer', fontWeight: 600 }}>Full extractor payload</summary>
-              <pre style={{ background: '#f4f6fb', padding: 10, borderRadius: 6, overflow: 'auto', fontSize: 12 }}>{JSON.stringify(r.extractedRaw, null, 2)}</pre>
-            </details>
-          </>
-        )}
-      </div>
-
-      {/* PHOTO FINDINGS + REHAB */}
-      <div style={card}>
-        <h3 style={h3}>Photo Findings & Rehab Analysis</h3>
-        {!ph ? <p style={srcStyle}>No photos analyzed.</p> : (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <Val label="Overall Condition Tier" value={ph.overall_condition_tier || '—'} source="Photo Analyzer" />
-              <Val label="Photos Analyzed" value={ph.photos_analyzed ?? '—'} source="Photo Analyzer" />
-              <Val label="Rehab Estimate (mid)" value={money(ph.rehab_estimate_mid)} source={`Photo-assisted tier × sqft (${ph.basis || 'benchmark'})`} />
-              <Val label="Rehab Range" value={`${money(ph.rehab_estimate_low)} – ${money(ph.rehab_estimate_high)}`} source="±15% band, Photo Analyzer" />
-            </div>
-            {ph.per_system_tiers && (
-              <div style={{ marginTop: 8 }}>
-                <b>Per-system condition (basis for rehab tier):</b>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, marginTop: 4 }}>
-                  {Object.entries(ph.per_system_tiers).map(([k, v]) => <div key={k} style={{ fontSize: 13 }}>{k}: <b>{v}</b></div>)}
-                </div>
-              </div>
-            )}
-            {ph.explanation_one_line && <p style={srcStyle}>{ph.explanation_one_line}</p>}
-          </>
-        )}
-      </div>
-
-      {/* ASSUMPTIONS + MISSING INFO */}
-      <div style={card}>
-        <h3 style={h3}>Assumptions & Missing Information</h3>
-        <p style={{ fontSize: 13 }}><b>Assumptions used:</b> bible-math defaults (LTV, lender rate/amortization, DSCR target, wholesale fee) from /api/calc; expense ratio defaults to 40% when not provided.</p>
-        {r.missing.length > 0
-          ? <div><b style={{ color: '#C8851A' }}>Missing (analysis treated as incomplete):</b><ul>{r.missing.map((m, i) => <li key={i}>{m}</li>)}</ul></div>
-          : <p style={{ color: '#2F7A40' }}>No required fields flagged missing.</p>}
       </div>
 
       {/* SAVE / DRIVE */}
