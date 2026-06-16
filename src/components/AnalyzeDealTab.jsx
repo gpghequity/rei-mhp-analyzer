@@ -339,16 +339,56 @@ function RehabEmbed({ mode, address, sqft, units, onResult }) {
   useEffect(() => {
     function onMsg(e) {
       const d = e.data
-      console.log('[Rehab] Message received:', d?.type, d)
+      // Only listen for our specific message type
       if (!d || d.type !== 'rei-rehab-total') return
-      console.log('[Rehab] Processing rehab total:', d.totalRehab)
-      const breakdown = (d.lineItems || []).map(li => ({ id: li.id, label: li.label, condition: '', total: li.total }))
-      onResult?.(Number(d.totalRehab) || 0, { breakdown, holdingCost: d.holdingCost, grandTotal: d.grandTotal, flatOverride: d.flatOverride })
+
+      try {
+        // Contract v1 validation: Rehab Calc sends { type, version, totalRehab, grandTotal, lineItems, ... }
+        // If contract changes, version number allows graceful migration.
+        if (d.version !== 1) {
+          console.warn('[Rehab] Unknown message version:', d.version, '— expected v1');
+          return;
+        }
+
+        // Type guards: ensure required fields exist and are correct type
+        const totalRehab = d.totalRehab;
+        const grandTotal = d.grandTotal;
+        const holdingCost = d.holdingCost || 0;
+        const lineItems = Array.isArray(d.lineItems) ? d.lineItems : [];
+
+        // Validate numbers
+        if (typeof totalRehab !== 'number' || !Number.isFinite(totalRehab)) {
+          console.error('[Rehab] Invalid totalRehab:', totalRehab);
+          return;
+        }
+        if (typeof grandTotal !== 'number' || !Number.isFinite(grandTotal)) {
+          console.error('[Rehab] Invalid grandTotal:', grandTotal);
+          return;
+        }
+
+        // Map lineItems safely: missing fields default to empty string / 0
+        const breakdown = lineItems.map(li => ({
+          id: li?.id || 'unknown',
+          label: li?.label || 'System',
+          condition: li?.condition || '',
+          total: typeof li?.total === 'number' ? li.total : 0
+        })).filter(li => li.total > 0);
+
+        console.log('[Rehab] ✓ Valid message received, totalRehab:', totalRehab);
+        onResult?.(totalRehab, { breakdown, holdingCost, grandTotal, flatOverride: d.flatOverride || null });
+      } catch (err) {
+        console.error('[Rehab] Message handler error:', err, '— data:', d);
+        // Don't throw; silently fail so UI keeps working
+      }
     }
-    window.addEventListener('message', onMsg)
-    console.log('[Rehab] Listener attached')
-    return () => window.removeEventListener('message', onMsg)
-  }, [onResult])
+
+    window.addEventListener('message', onMsg);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Rehab] Listener attached for message type: rei-rehab-total');
+    }
+
+    return () => window.removeEventListener('message', onMsg);
+  }, [onResult]);
   const btn = { padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 6, border: '1px solid #0A0F2C', background: '#0A0F2C', color: '#C9A84C', cursor: 'pointer' }
   const isCommercial = mode === 'commercial'
   return (
