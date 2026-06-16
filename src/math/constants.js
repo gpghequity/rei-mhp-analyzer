@@ -12,7 +12,7 @@ export function loadConstants() {
   flat.RATE_BANK_RESI = RES.mortgageRate
   flat.AMORT_BANK_RESI = RES.amortizationYears
   flat.LTV_RESI = RES.ltv
-  flat.DSCR_RESI = RES.dscr
+  flat.DSCR_RESI = RES.dscr || 1.25  // Default: 1.25 DSCR for residential rental
 
   // Flatten STORAGE standards
   const STOR = STANDARDS.STORAGE || {}

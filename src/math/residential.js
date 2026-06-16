@@ -41,13 +41,13 @@ export function residentialDSCR(noi, purchase) {
     loan,
     annualDS,
     dscr: noi / annualDS,
-    pass: noi / annualDS >= C.DSCR_CONSERVATIVE
+    pass: noi / annualDS >= C.DSCR_RESI
   }
 }
 
 export function ownerHardMode(noiStandard, rehab) {
   const C = loadConstants()
-  const numerator = (noiStandard / C.DSCR_CONSERVATIVE) - ((rehab + C.CLOSING_RESI) * C.RATE_OWNER)
+  const numerator = (noiStandard / C.DSCR_RESI) - ((rehab + C.CLOSING_RESI) * C.RATE_OWNER)
   const denominator = (C.LTV_RESI * C.K_BANK_RESI) + C.RATE_OWNER
   const pMax = numerator / denominator
   const rounded = Math.floor(pMax / 1000) * 1000
