@@ -77,7 +77,7 @@ export default function App() {
       <footer>
         <div className="footer-copy">© 2026 Projects with a Purpose LLC · Powered by REI Platform</div>
         <div>REI MHP Analyzer v{VERSION} · Released {BUILD_DATE}</div>
-        <div>Math Bible v3.1 (Storage · Residential · MF 1–19 / 20+ tiers · Kicker · Sunset · Ramp) + Fast Calc V2.6 (MHP) + 7 Alt Exit Strategies + Land/IOS intake — drift-tolerant.</div>
+        <div>Underwriting standards from the REI Platform Math Bible (Storage · Residential · MF 1–19 / 20+ tiers · Kicker · Sunset · Ramp) + Fast Calc V2.6 (MHP) + 7 Alt Exit Strategies + Land/IOS intake.</div>
         <div className="footer-disclaimer">Estimates only. Operator assumes all underwriting and decision responsibility. Verify numbers independently before any offer or transaction.</div>
       </footer>
     </div>
